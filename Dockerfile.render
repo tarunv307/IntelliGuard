@@ -1,0 +1,33 @@
+# Dockerfile.render — Production build for Render Web Service
+# Combines FastAPI Backend + Static UI on the port dynamically assigned by Render ($PORT)
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install python dependencies
+COPY api/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy API source code
+COPY api/app/ ./app/
+
+# Copy UI static files
+COPY ui/public/ /ui/public/
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PORT=10000
+
+EXPOSE ${PORT}
+
+# Run Uvicorn on dynamic Render PORT
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

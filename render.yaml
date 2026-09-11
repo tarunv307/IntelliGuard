@@ -1,0 +1,86 @@
+# render.yaml — Render Blueprint Specification for IntelliGuard
+# Deploy this directly from the Render Dashboard via "Blueprints -> New Blueprint Instance"
+
+services:
+  # ── 1. Web Service: Combined FastAPI + Web UI ─────────────────────────────────
+  - type: web
+    name: intelliguard-web
+    env: docker
+    dockerfilePath: Dockerfile.render
+    dockerContext: .
+    plan: standard
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: RENDER
+        value: "true"
+
+      # ── Neo4j Graph Database (Neo4j AuraDB Free or Self-Hosted) ───────────────
+      - key: NEO4J_URI
+        sync: false # Set to your neo4j+s://<instance-id>.databases.neo4j.io
+      - key: NEO4J_USER
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        sync: false # e.g. your Neo4j Aura password
+      - key: NEO4J_DATABASE
+        value: neo4j
+
+      # ── Apache Kafka (Upstash Kafka / Confluent Cloud or Managed Broker) ──────
+      - key: KAFKA_BOOTSTRAP
+        sync: false # e.g. your-kafka-broker:9092 or Upstash Kafka endpoint
+      - key: KAFKA_TOPIC
+        value: csv-rows
+
+      # ── AWS S3 Storage ────────────────────────────────────────────────────────
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_S3_BUCKET
+        sync: false # e.g. your-s3-bucket-name
+
+      # ── Supabase (PostgreSQL Database) ────────────────────────────────────────
+      - key: SUPABASE_URL
+        sync: false # e.g. https://<project-ref>.supabase.co
+      - key: SUPABASE_KEY
+        sync: false # e.g. your Supabase service_role / anon key
+      - key: SUPABASE_DB_URL
+        sync: false # e.g. postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+
+  # ── 2. Background Worker: Kafka → Neo4j Consumer Loader ───────────────────────
+  - type: worker
+    name: intelliguard-loader
+    env: docker
+    dockerfilePath: loader/Dockerfile
+    dockerContext: loader
+    plan: standard
+    autoDeploy: true
+    envVars:
+      - key: KAFKA_BOOTSTRAP
+        fromService:
+          type: web
+          name: intelliguard-web
+          envVarKey: KAFKA_BOOTSTRAP
+      - key: KAFKA_TOPIC
+        value: csv-rows
+      - key: NEO4J_URI
+        fromService:
+          type: web
+          name: intelliguard-web
+          envVarKey: NEO4J_URI
+      - key: NEO4J_USER
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        fromService:
+          type: web
+          name: intelliguard-web
+          envVarKey: NEO4J_PASSWORD
+      - key: NEO4J_DATABASE
+        value: neo4j
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: intelliguard-web
+          property: host
