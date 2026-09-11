@@ -1,0 +1,16 @@
+order_id,customer_id,product,category,quantity,price,status
+1001,C7,Widget A,Electronics,2,29.99,shipped
+1002,C7,Gadget B,Electronics,1,49.99,pending
+1003,C12,Widget A,Electronics,3,29.99,shipped
+1004,C15,Doohickey,Hardware,5,9.99,delivered
+1005,C7,Thingamajig,Hardware,2,14.99,shipped
+1006,C22,Widget A,Electronics,1,29.99,pending
+1007,C12,Gizmo,Software,1,99.99,delivered
+1008,C33,Gadget B,Electronics,2,49.99,shipped
+1009,C15,Widget A,Electronics,4,29.99,pending
+1010,C44,Doohickey,Hardware,10,9.99,delivered
+1011,C7,Gizmo,Software,2,99.99,shipped
+1012,C22,Thingamajig,Hardware,1,14.99,delivered
+1013,C33,Widget A,Electronics,2,29.99,pending
+1014,C44,Gadget B,Electronics,3,49.99,shipped
+1015,C12,Doohickey,Hardware,7,9.99,delivered

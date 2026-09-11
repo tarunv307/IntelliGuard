@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CSV Graph Chat — Upload a CSV, stream it through Kafka into Neo4j, and ask plain-English questions answered with Cypher." />
+  <title>CSV Graph Chat — Kafka · Neo4j · AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Background decoration ── -->
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="app-shell">
+
+    <!-- ── Header ── -->
+    <header class="app-header">
+      <div class="header-logo">
+        <div class="logo-icon" aria-hidden="true">⬡</div>
+        <div>
+          <h1 class="header-title">CSV Graph Chat</h1>
+          <p class="header-subtitle">Kafka · Neo4j · Grounded AI</p>
+        </div>
+      </div>
+      <div class="header-status" id="health-badge">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Checking…</span>
+      </div>
+    </header>
+
+    <main class="app-main">
+
+      <!-- ══ LEFT PANEL — Upload + Progress ══ -->
+      <section class="panel panel-upload" aria-label="Upload CSV">
+
+        <div class="panel-header">
+          <span class="panel-icon">📤</span>
+          <h2 class="panel-title">Upload Dataset</h2>
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="drop-zone" tabindex="0" role="button"
+             aria-label="Drag and drop a CSV file here, or click to browse">
+          <div class="drop-zone-inner">
+            <div class="drop-icon" id="drop-icon">📂</div>
+            <p class="drop-primary">Drag &amp; drop your CSV here</p>
+            <p class="drop-secondary">or click to browse files</p>
+            <p class="drop-hint">Supports .csv files of any size</p>
+          </div>
+          <input type="file" id="file-input" accept=".csv,text/csv" class="file-input-hidden"
+                 aria-label="Choose CSV file" />
+        </div>
+
+        <!-- Upload controls -->
+        <div class="upload-controls" id="upload-controls" style="display:none">
+          <div class="selected-file" id="selected-file">
+            <span class="file-icon">📄</span>
+            <span id="selected-filename">—</span>
+            <span id="selected-size" class="file-size"></span>
+          </div>
+          <div class="upload-actions">
+            <button id="upload-btn" class="btn btn-primary" aria-label="Start upload">
+              <span class="btn-icon">🚀</span> Upload &amp; Ingest
+            </button>
+            <button id="clear-btn" class="btn btn-ghost" aria-label="Clear selection">Clear</button>
+          </div>
+        </div>
+
+        <!-- Job progress -->
+        <div class="job-progress" id="job-progress" style="display:none">
+          <div class="progress-header">
+            <span class="progress-label">Ingestion progress</span>
+            <span class="progress-pct" id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+               aria-valuenow="0" id="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar"></div>
+          </div>
+          <div class="progress-stats">
+            <span>Job: <code id="job-id-display">—</code></span>
+            <span id="rows-stat">— / — rows</span>
+            <span class="status-chip" id="job-status-chip">queued</span>
+          </div>
+        </div>
+
+        <!-- Error/success banner -->
+        <div class="upload-banner" id="upload-banner" style="display:none" role="alert"></div>
+
+      </section>
+
+      <!-- ══ RIGHT PANEL — Preview ══ -->
+      <section class="panel panel-preview" aria-label="Data preview">
+
+        <div class="panel-header">
+          <span class="panel-icon">🔍</span>
+          <h2 class="panel-title">Data Preview</h2>
+          <span class="preview-badge" id="preview-badge" style="display:none"></span>
+        </div>
+
+        <div class="preview-container" id="preview-container">
+          <div class="preview-empty">
+            <div class="empty-icon">📋</div>
+            <p>Upload a CSV to preview the first 20 rows</p>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ══ CHAT SECTION ══ -->
+    <section class="chat-section" aria-label="Chat with your data">
+
+      <div class="chat-header">
+        <span class="panel-icon">💬</span>
+        <h2 class="panel-title">Ask Your Data</h2>
+        <div class="chat-hints">
+          <button class="hint-chip" onclick="fillQuestion('How many rows are there?')">How many rows?</button>
+          <button class="hint-chip" onclick="fillQuestion('List columns')">List columns</button>
+          <button class="hint-chip" onclick="fillQuestion('Group by status')">Group by status</button>
+          <button class="hint-chip" onclick="fillQuestion('Average price')">Average price</button>
+          <button class="hint-chip" onclick="fillQuestion('Show all rows')">Show all rows</button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages" aria-live="polite">
+        <div class="chat-welcome">
+          <div class="welcome-icon">🤖</div>
+          <p>Upload a CSV and then ask me anything about your data.</p>
+          <p class="welcome-sub">I'll answer using Cypher queries against the graph — no hallucinations.</p>
+        </div>
+      </div>
+
+      <div class="chat-input-row">
+        <input
+          type="text"
+          id="chat-input"
+          class="chat-input"
+          placeholder="Ask a question about your data…"
+          aria-label="Chat question"
+          autocomplete="off"
+        />
+        <button id="chat-send-btn" class="btn btn-primary btn-send" aria-label="Send question">
+          <span>Send</span>
+          <span class="btn-icon">➤</span>
+        </button>
+      </div>
+
+    </section>
+
+  </div><!-- /app-shell -->
+
+  <script src="app.js"></script>
+</body>
+</html>

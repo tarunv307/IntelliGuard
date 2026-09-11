@@ -1,0 +1,9 @@
+# Git ignore
+.env
+*.pyc
+__pycache__/
+.DS_Store
+node_modules/
+.git/
+data/large_10k.csv
+*.log
