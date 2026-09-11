@@ -5,6 +5,9 @@ State machine:  queued → loading → complete | failed
 
 complete is set ONLY when rows_loaded + rows_failed == rows_total,
 ensuring the chatbot sees consistent totals.
+
+Note: get_all_dataset_ids() falls back to Neo4j so it survives container
+restarts (in-memory state is empty after restart but graph data persists).
 """
 import threading
 import uuid
@@ -75,6 +78,24 @@ def record_progress(job_id: str, loaded: int = 0, failed: int = 0) -> Optional[d
 
 
 def get_all_dataset_ids() -> list[str]:
-    """Return all dataset IDs currently tracked."""
+    """
+    Return all dataset IDs currently tracked in memory.
+    Falls back to querying Neo4j directly so the chatbot works even
+    after an API container restart (in-memory state is lost but graph persists).
+    """
     with _lock:
-        return [j["dataset_id"] for j in _jobs.values()]
+        ids = [j["dataset_id"] for j in _jobs.values()]
+    if ids:
+        return ids
+    # Fallback: check whether ANY Row nodes exist in the graph
+    try:
+        from app import neo4j_client  # local import to avoid circular
+        result = neo4j_client.run_query(
+            "MATCH (r:Row) RETURN r.dataset_id AS dataset_id LIMIT 1", {}
+        )
+        if result:
+            ds_id = result[0].get("dataset_id")
+            return [ds_id] if ds_id else ["__unknown__"]
+    except Exception:
+        pass
+    return []
